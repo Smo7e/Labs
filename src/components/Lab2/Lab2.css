@@ -1,0 +1,249 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 40px;
+  }
+  
+  h1 {
+    color: #2d3748;
+    margin-bottom: 10px;
+    font-size: 28px;
+  }
+  
+  .subtitle {
+    color: #718096;
+    margin-bottom: 30px;
+    font-size: 14px;
+  }
+  
+  .size-selector {
+    margin-bottom: 30px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #4a5568;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  input[type='number'] {
+    width: 80px;
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+  }
+  
+  input[type='number']:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+  
+  .matrix-container {
+    margin-bottom: 30px;
+    overflow-x: auto;
+  }
+  
+  .matrix-label {
+    color: #2d3748;
+    font-weight: 600;
+    margin-bottom: 15px;
+    font-size: 16px;
+  }
+  
+  .matrix {
+    display: inline-block;
+    background: #f7fafc;
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px solid #e2e8f0;
+  }
+  
+  .matrix-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  
+  .matrix-row:last-child {
+    margin-bottom: 0;
+  }
+  
+  .matrix-cell input {
+    width: 80px;
+    padding: 10px;
+    border: 2px solid #cbd5e0;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 14px;
+    transition: all 0.3s;
+  }
+  
+  .matrix-cell input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+  }
+  
+  .equals {
+    font-size: 20px;
+    color: #4a5568;
+    font-weight: bold;
+    margin: 0 10px;
+  }
+  
+  .buttons {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+  
+  button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  }
+  
+  .btn-secondary {
+    background: #edf2f7;
+    color: #4a5568;
+  }
+  
+  .btn-secondary:hover {
+    background: #e2e8f0;
+  }
+  
+  .btn-clear {
+    background: #fed7d7;
+    color: #c53030;
+  }
+  
+  .btn-clear:hover {
+    background: #fc8181;
+    color: white;
+  }
+  
+  .solution {
+    background: #f0fff4;
+    border: 2px solid #9ae6b4;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+  }
+  
+  .solution h3 {
+    color: #22543d;
+    margin-bottom: 15px;
+    font-size: 18px;
+  }
+  
+  .solution-item {
+    margin-bottom: 10px;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    font-size: 16px;
+    color: #2d3748;
+    font-weight: 500;
+  }
+  
+  .error {
+    background: #fff5f5;
+    border: 2px solid #fc8181;
+    border-radius: 12px;
+    padding: 20px;
+    color: #c53030;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+  
+  .steps {
+    background: #fefcbf;
+    border: 2px solid #ecc94b;
+    border-radius: 12px;
+    padding: 25px;
+  }
+  
+  .steps h3 {
+    color: #744210;
+    margin-bottom: 15px;
+    font-size: 18px;
+  }
+  
+  .step {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #ecc94b;
+  }
+  
+  .step-title {
+    font-weight: 600;
+    color: #744210;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  
+  .step-matrix {
+    font-family: 'Courier New', monospace;
+    white-space: pre;
+    background: #fffaf0;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    color: #2d3748;
+    line-height: 1.6;
+  }
+  
+  @media (max-width: 768px) {
+    .container {
+      padding: 20px;
+    }
+  
+    h1 {
+      font-size: 24px;
+    }
+  
+    .matrix {
+      padding: 15px;
+    }
+  
+    .matrix-cell input {
+      width: 60px;
+      padding: 8px;
+      font-size: 12px;
+    }
+  }
