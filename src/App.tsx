@@ -3,7 +3,7 @@ import "./App.css";
 import Lab1 from "./components/Lab1/Lab1";
 import Lab2 from "./components/Lab2/Lab2";
 // import Lab3 from "./components/Lab3/Lab3";
-// import Lab4 from "./components/Lab4/Lab3";
+import Lab4 from "./components/Lab4/Lab4";
 
 type LabType = 1 | 2 | 3 | 4;
 
@@ -18,8 +18,8 @@ function App() {
         return <Lab2 />;
       // case 3:
       //   return <Lab3 />;
-      // case 4:
-      //   return <Lab4 />;
+      case 4:
+        return <Lab4 />;
       default:
         return <Lab1 />;
     }
