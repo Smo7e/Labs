@@ -7,22 +7,37 @@ interface Step {
 }
 
 const Lab2: React.FC = () => {
-  const [size, setSize] = useState<number>(3);
+  const [numRows, setNumRows] = useState<number>(3);
+  const [numCols, setNumCols] = useState<number>(3);
   const [matrix, setMatrix] = useState<number[][]>(
     Array(3).fill(null).map(() => Array(4).fill(0))
   );
   const [solution, setSolution] = useState<number[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
+  const [parametricSolution, setParametricSolution] = useState<string[]>([]);
 
-  const handleSizeChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const newSize = parseInt(e.target.value) || 2;
-    const clampedSize = Math.max(2, Math.min(10, newSize));
-    setSize(clampedSize);
-    setMatrix(Array(clampedSize).fill(null).map(() => Array(clampedSize + 1).fill(0)));
+  const resetSolution = (): void => {
     setSolution(null);
     setError(null);
     setSteps([]);
+    setParametricSolution([]);
+  };
+
+  const handleNumRowsChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const newRows = parseInt(e.target.value) || 1;
+    const clampedRows = Math.max(1, Math.min(10, newRows));
+    setNumRows(clampedRows);
+    setMatrix(Array(clampedRows).fill(null).map(() => Array(numCols + 1).fill(0)));
+    resetSolution();
+  };
+
+  const handleNumColsChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const newCols = parseInt(e.target.value) || 1;
+    const clampedCols = Math.max(1, Math.min(10, newCols));
+    setNumCols(clampedCols);
+    setMatrix(Array(numRows).fill(null).map(() => Array(clampedCols + 1).fill(0)));
+    resetSolution();
   };
 
   const handleMatrixChange = (row: number, col: number, value: string): void => {
@@ -41,104 +56,214 @@ const Lab2: React.FC = () => {
     setError(null);
     setSolution(null);
     setSteps([]);
+    setParametricSolution([]);
 
     const workMatrix = matrix.map(row => [...row]);
     const newSteps: Step[] = [];
-    const n = size;
+    const m = numRows;
+    const n = numCols;
 
     newSteps.push({
       title: 'Исходная расширенная матрица',
       matrix: workMatrix.map(row => [...row]),
     });
 
-    // Прямой ход метода Гаусса-Жордана
-    for (let i = 0; i < n; i++) {
-      // Поиск максимального элемента в столбце (частичный выбор ведущего элемента)
-      let maxRow = i;
-      for (let k = i + 1; k < n; k++) {
-        if (Math.abs(workMatrix[k][i]) > Math.abs(workMatrix[maxRow][i])) {
-          maxRow = k;
+    // Метод Гаусса-Жордана для прямоугольных матриц
+    let currentRow = 0;
+    const pivotCols: number[] = [];
+
+    for (let col = 0; col < n && currentRow < m; col++) {
+      // Поиск максимального элемента в столбце
+      let maxRow = currentRow;
+      for (let row = currentRow + 1; row < m; row++) {
+        if (Math.abs(workMatrix[row][col]) > Math.abs(workMatrix[maxRow][col])) {
+          maxRow = row;
         }
       }
 
+      // Если весь столбец нулевой, пропускаем
+      if (Math.abs(workMatrix[maxRow][col]) < 1e-10) {
+        continue;
+      }
+
       // Перестановка строк
-      if (maxRow !== i) {
-        [workMatrix[i], workMatrix[maxRow]] = [workMatrix[maxRow], workMatrix[i]];
+      if (maxRow !== currentRow) {
+        [workMatrix[currentRow], workMatrix[maxRow]] = [workMatrix[maxRow], workMatrix[currentRow]];
         newSteps.push({
-          title: `Перестановка строк ${i + 1} и ${maxRow + 1}`,
+          title: `Перестановка строк ${currentRow + 1} и ${maxRow + 1}`,
           matrix: workMatrix.map(row => [...row]),
         });
       }
 
-      // Проверка на нулевой ведущий элемент
-      if (Math.abs(workMatrix[i][i]) < 1e-10) {
-        setError('Система не имеет единственного решения (определитель = 0)');
-        return;
-      }
+      pivotCols.push(col);
 
       // Нормализация текущей строки
-      const pivot = workMatrix[i][i];
+      const pivot = workMatrix[currentRow][col];
       for (let j = 0; j <= n; j++) {
-        workMatrix[i][j] /= pivot;
+        workMatrix[currentRow][j] /= pivot;
       }
       newSteps.push({
-        title: `Нормализация строки ${i + 1} (деление на ${pivot.toFixed(4)})`,
+        title: `Нормализация строки ${currentRow + 1} (деление на ${pivot.toFixed(4)})`,
         matrix: workMatrix.map(row => [...row]),
       });
 
       // Обнуление элементов столбца
-      for (let k = 0; k < n; k++) {
-        if (k !== i) {
-          const factor = workMatrix[k][i];
+      for (let row = 0; row < m; row++) {
+        if (row !== currentRow) {
+          const factor = workMatrix[row][col];
           if (Math.abs(factor) > 1e-10) {
             for (let j = 0; j <= n; j++) {
-              workMatrix[k][j] -= factor * workMatrix[i][j];
+              workMatrix[row][j] -= factor * workMatrix[currentRow][j];
             }
           }
         }
       }
       newSteps.push({
-        title: `Обнуление элементов столбца ${i + 1}`,
+        title: `Обнуление элементов столбца ${col + 1}`,
         matrix: workMatrix.map(row => [...row]),
       });
+
+      currentRow++;
     }
 
-    // Извлечение решения
-    const result = workMatrix.map(row => row[n]);
+    // Проверка на несовместность
+    for (let i = currentRow; i < m; i++) {
+      let allZero = true;
+      for (let j = 0; j < n; j++) {
+        if (Math.abs(workMatrix[i][j]) > 1e-10) {
+          allZero = false;
+          break;
+        }
+      }
+      if (allZero && Math.abs(workMatrix[i][n]) > 1e-10) {
+        setError('Система несовместна (противоречие в уравнениях)');
+        setSteps(newSteps);
+        return;
+      }
+    }
 
-    setSteps(newSteps);
-    setSolution(result);
+    // Определение свободных переменных
+    const freeVars: number[] = [];
+    for (let col = 0; col < n; col++) {
+      if (!pivotCols.includes(col)) {
+        freeVars.push(col);
+      }
+    }
+
+    if (freeVars.length > 0) {
+      // Бесконечно много решений
+      const params = ['α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ'];
+      const equations: string[] = [];
+
+      // Параметры для свободных переменных
+      freeVars.forEach((col, idx) => {
+        const param = idx < params.length ? params[idx] : `t${idx}`;
+        equations.push(`x${col + 1} = ${param}`);
+      });
+
+      // Выражения для базисных переменных
+      pivotCols.forEach((col, idx) => {
+        let expr = workMatrix[idx][n].toFixed(4);
+        freeVars.forEach((freeCol, paramIdx) => {
+          const coef = -workMatrix[idx][freeCol];
+          if (Math.abs(coef) > 1e-10) {
+            const param = paramIdx < params.length ? params[paramIdx] : `t${paramIdx}`;
+            const sign = coef > 0 ? '+' : '';
+            expr += ` ${sign}${coef.toFixed(4)}${param}`;
+          }
+        });
+        equations.push(`x${col + 1} = ${expr}`);
+      });
+
+      setParametricSolution(equations);
+      setSteps(newSteps);
+    } else {
+      // Единственное решение
+      const result = Array(n).fill(0);
+      pivotCols.forEach((col, idx) => {
+        result[col] = workMatrix[idx][n];
+      });
+      setSolution(result);
+      setSteps(newSteps);
+    }
   };
 
-  const fillExample = (): void => {
-    // Пример: 2x + y - z = 8, -3x - y + 2z = -11, -2x + y + 2z = -3
-    if (size === 3) {
-      setMatrix([
+  const examples = [
+    {
+      name: 'Пример 1 (3×3)',
+      rows: 3,
+      cols: 3,
+      matrix: [
         [2, 1, -1, 8],
         [-3, -1, 2, -11],
         [-2, 1, 2, -3],
-      ]);
-    } else {
-      // Простой пример для других размерностей
-      const newMatrix = Array(size)
-        .fill(null)
-        .map((_, i) =>
-          Array(size + 1)
-            .fill(null)
-            .map((_, j) => (j === size ? i + 1 : i === j ? 2 : 1))
-        );
-      setMatrix(newMatrix);
-    }
-    setSolution(null);
-    setError(null);
-    setSteps([]);
+      ],
+      description: '2x₁ + x₂ - x₃ = 8; -3x₁ - x₂ + 2x₃ = -11; -2x₁ + x₂ + 2x₃ = -3',
+    },
+    {
+      name: 'Пример 2 (3×3)',
+      rows: 3,
+      cols: 3,
+      matrix: [
+        [1, 3, 0, 14],
+        [2, 0, -3, 7],
+        [0, 2, 1, 7],
+      ],
+      description: 'x₁ + 3x₂ = 14; 2x₁ - 3x₃ = 7; 2x₂ + x₃ = 7',
+    },
+    {
+      name: 'Пример 3 (3×3)',
+      rows: 3,
+      cols: 3,
+      matrix: [
+        [1, 3, -4, 5],
+        [-1, 1, 1, 0],
+        [2, 1, 1, 9],
+      ],
+      description: 'x₁ + 3x₂ - 4x₃ = 5; -x₁ + x₂ + x₃ = 0; 2x₁ + x₂ + x₃ = 9 (x₁=3, x₂=2, x₃=1)',
+    },
+    {
+      name: 'Пример 4 (3×4)',
+      rows: 3,
+      cols: 4,
+      matrix: [
+        [1, 2, 1, 0, 4],
+        [1, 1, 0, 1, 6],
+        [1, -1, -1, 3, 10],
+      ],
+      description: '3 уравнения, 4 переменных (бесконечно много решений)',
+    },
+    {
+      name: 'Пример 5 (2×4)',
+      rows: 2,
+      cols: 4,
+      matrix: [
+        [1, 1, 1, 4, 1],
+        [-1, 0, 1, 2, 1],
+      ],
+      description: '2 уравнения, 4 переменных (параметрическое решение)',
+    },
+  ];
+
+  const [currentExampleIndex, setCurrentExampleIndex] = useState<number>(0);
+
+  const loadExample = (index: number): void => {
+    const example = examples[index];
+    setCurrentExampleIndex(index);
+    setNumRows(example.rows);
+    setNumCols(example.cols);
+    setMatrix(example.matrix.map(row => [...row]));
+    resetSolution();
+  };
+
+  const nextExample = (): void => {
+    const nextIndex = (currentExampleIndex + 1) % examples.length;
+    loadExample(nextIndex);
   };
 
   const clearMatrix = (): void => {
-    setMatrix(Array(size).fill(null).map(() => Array(size + 1).fill(0)));
-    setSolution(null);
-    setError(null);
-    setSteps([]);
+    setMatrix(Array(numRows).fill(null).map(() => Array(numCols + 1).fill(0)));
+    resetSolution();
   };
 
   return (
@@ -147,14 +272,46 @@ const Lab2: React.FC = () => {
       <p className="subtitle">Система линейных алгебраических уравнений</p>
 
       <div className="size-selector">
-        <label>Размерность системы (количество уравнений):</label>
-        <input
-          type="number"
-          min="2"
-          max="10"
-          value={size}
-          onChange={handleSizeChange}
-        />
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end' }}>
+          <div>
+            <label>Количество строк (m):</label>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={numRows}
+              onChange={handleNumRowsChange}
+            />
+          </div>
+          <div>
+            <label>Количество столбцов (n):</label>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={numCols}
+              onChange={handleNumColsChange}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="examples-section">
+        <h3>Примеры из лекций:</h3>
+        <div className="example-selector">
+          {examples.map((example, index) => (
+            <button
+              key={index}
+              className={`example-btn ${currentExampleIndex === index ? 'active' : ''}`}
+              onClick={() => loadExample(index)}
+            >
+              {example.name}
+            </button>
+          ))}
+        </div>
+        <div className="example-description">
+          {examples[currentExampleIndex].description}
+        </div>
       </div>
 
       <div className="matrix-container">
@@ -192,8 +349,8 @@ const Lab2: React.FC = () => {
         <button className="btn-primary" onClick={solveSystem}>
           Решить систему
         </button>
-        <button className="btn-secondary" onClick={fillExample}>
-          Пример
+        <button className="btn-secondary" onClick={nextExample}>
+          Следующий пример
         </button>
         <button className="btn-clear" onClick={clearMatrix}>
           Очистить
@@ -202,9 +359,20 @@ const Lab2: React.FC = () => {
 
       {error && <div className="error">⚠️ {error}</div>}
 
+      {parametricSolution.length > 0 && (
+        <div className="solution">
+          <h3>✓ Бесконечно много решений (параметрическое):</h3>
+          {parametricSolution.map((eq, i) => (
+            <div key={i} className="solution-item">
+              {eq}
+            </div>
+          ))}
+        </div>
+      )}
+
       {solution && (
         <div className="solution">
-          <h3>✓ Решение системы:</h3>
+          <h3>✓ Единственное решение:</h3>
           {solution.map((val, i) => (
             <div key={i} className="solution-item">
               x<sub>{i + 1}</sub> = {val.toFixed(6)}
@@ -229,4 +397,3 @@ const Lab2: React.FC = () => {
 };
 
 export default Lab2;
-
