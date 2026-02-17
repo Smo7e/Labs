@@ -37,6 +37,73 @@ const Lab3: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
 
+  const examples = [
+    {
+      name: 'Пример 1',
+      numVariables: 2,
+      numConstraints: 2,
+      optimizationType: 'max' as OptimizationType,
+      objectiveCoefficients: [3, 5],
+      constraints: [
+        { coefficients: [1, 0], type: '<=' as ConstraintType, rhs: 4 },
+        { coefficients: [0, 2], type: '<=' as ConstraintType, rhs: 12 },
+      ],
+      description: 'max z = 3x₁ + 5x₂; x₁ ≤ 4; 2x₂ ≤ 12 (Ответ: x₁=4, x₂=6, z=42)',
+    },
+    {
+      name: 'Пример 2',
+      numVariables: 2,
+      numConstraints: 3,
+      optimizationType: 'max' as OptimizationType,
+      objectiveCoefficients: [3, 8],
+      constraints: [
+        { coefficients: [1, 7], type: '=' as ConstraintType, rhs: 32 },
+        { coefficients: [2, 5], type: '=' as ConstraintType, rhs: 42 },
+        { coefficients: [3, 4], type: '=' as ConstraintType, rhs: 62 },
+      ],
+      description: 'max F = 3x₁ + 8x₂; x₁ + 7x₂ = 32; 2x₁ + 5x₂ = 42; 3x₁ + 4x₂ = 62',
+    },
+    {
+      name: 'Пример 3',
+      numVariables: 2,
+      numConstraints: 2,
+      optimizationType: 'max' as OptimizationType,
+      objectiveCoefficients: [3, 2],
+      constraints: [
+        { coefficients: [1, 1], type: '=' as ConstraintType, rhs: 4 },
+        { coefficients: [2, 1], type: '<=' as ConstraintType, rhs: 6 },
+      ],
+      description: 'max z = 3x₁ + 2x₂; x₁ + x₂ = 4; 2x₁ + x₂ ≤ 6',
+    },
+    {
+      name: 'Пример 4',
+      numVariables: 2,
+      numConstraints: 2,
+      optimizationType: 'max' as OptimizationType,
+      objectiveCoefficients: [4, 3],
+      constraints: [
+        { coefficients: [1, 1], type: '>=' as ConstraintType, rhs: 3 },
+        { coefficients: [2, 1], type: '<=' as ConstraintType, rhs: 10 },
+      ],
+      description: 'max z = 4x₁ + 3x₂; x₁ + x₂ ≥ 3; 2x₁ + x₂ ≤ 10',
+    },
+    {
+      name: 'Пример 5',
+      numVariables: 2,
+      numConstraints: 2,
+      optimizationType: 'min' as OptimizationType,
+      objectiveCoefficients: [2, 3],
+      constraints: [
+        { coefficients: [1, 2], type: '<=' as ConstraintType, rhs: 4 },
+        { coefficients: [2, 1], type: '<=' as ConstraintType, rhs: 4 },
+      ],
+      description: 'min z = 2x₁ + 3x₂; x₁ + 2x₂ ≥ 4; 2x₁ + x₂ ≥ 4',
+    },
+  ];
+
+  const [currentExampleIndex, setCurrentExampleIndex] = useState<number>(0);
+
+
   const handleNumVariablesChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const newNum = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
     setNumVariables(newNum);
@@ -96,6 +163,22 @@ const Lab3: React.FC = () => {
     setSolution(null);
     setError(null);
     setSteps([]);
+  };
+
+  const loadExample = (index: number): void => {
+    const example = examples[index];
+    setCurrentExampleIndex(index);
+    setNumVariables(example.numVariables);
+    setNumConstraints(example.numConstraints);
+    setOptimizationType(example.optimizationType);
+    setObjectiveCoefficients([...example.objectiveCoefficients]);
+    setConstraints(example.constraints.map(c => ({ ...c, coefficients: [...c.coefficients] })));
+    resetSolution();
+  };
+
+  const nextExample = (): void => {
+    const nextIndex = (currentExampleIndex + 1) % examples.length;
+    loadExample(nextIndex);
   };
 
   const formatTableau = (tableau: number[][], basis: number[]): string => {
@@ -159,6 +242,7 @@ const Lab3: React.FC = () => {
       let surplusIndex = numVariables + numSlack;
       let artificialIndex = numVariables + numSlack + numSurplus;
       const basis: number[] = [];
+      const artificialVars: number[] = []; // Отслеживаем искусственные переменные
       
       for (let i = 0; i < numConstraints; i++) {
         // Коэффициенты переменных
@@ -177,21 +261,34 @@ const Lab3: React.FC = () => {
         } else if (constraints[i].type === '>=') {
           tableau[i + 1][surplusIndex + 1] = -1;
           tableau[i + 1][artificialIndex + 1] = 1;
-          // Добавляем -M к целевой функции для искусственной переменной
-          for (let j = 0; j < numCols; j++) {
-            tableau[0][j] += (optimizationType === 'max' ? M : -M) * tableau[i + 1][j];
-          }
           basis.push(artificialIndex);
+          artificialVars.push(artificialIndex);
           surplusIndex++;
           artificialIndex++;
         } else { // '='
           tableau[i + 1][artificialIndex + 1] = 1;
-          // Добавляем -M к целевой функции для искусственной переменной
-          for (let j = 0; j < numCols; j++) {
-            tableau[0][j] += (optimizationType === 'max' ? M : -M) * tableau[i + 1][j];
-          }
           basis.push(artificialIndex);
+          artificialVars.push(artificialIndex);
           artificialIndex++;
+        }
+      }
+
+      // Корректировка строки целевой функции для искусственных переменных (M-метод)
+      // Цель: обнулить коэффициенты искусственных переменных в строке z (так как они в базисе)
+      for (const artVar of artificialVars) {
+        // Находим строку, где эта искусственная переменная в базисе
+        const rowIndex = basis.findIndex(b => b === artVar) + 1;
+        
+        // Для максимизации: вычитаем M * (строку ограничения)
+        // Для минимизации: добавляем M * (строку ограничения)
+        if (optimizationType === 'max') {
+          for (let j = 0; j < numCols; j++) {
+            tableau[0][j] -= M * tableau[rowIndex][j];
+          }
+        } else {
+          for (let j = 0; j < numCols; j++) {
+            tableau[0][j] += M * tableau[rowIndex][j];
+          }
         }
       }
 
@@ -319,41 +416,6 @@ const Lab3: React.FC = () => {
     }
   };
 
-  const fillExample = (): void => {
-    if (numVariables === 2 && numConstraints === 2) {
-      setOptimizationType('max');
-      setObjectiveCoefficients([3, 5]);
-      setConstraints([
-        { coefficients: [1, 0], type: '<=', rhs: 4 },
-        { coefficients: [0, 2], type: '<=', rhs: 12 },
-      ]);
-    } else {
-      // Общий пример
-      setOptimizationType('max');
-      setObjectiveCoefficients(Array(numVariables).fill(1));
-      setConstraints(
-        Array(numConstraints).fill(null).map(() => ({
-          coefficients: Array(numVariables).fill(1),
-          type: '<=' as ConstraintType,
-          rhs: 10,
-        }))
-      );
-    }
-    resetSolution();
-  };
-
-  const clearAll = (): void => {
-    setObjectiveCoefficients(Array(numVariables).fill(0));
-    setConstraints(
-      Array(numConstraints).fill(null).map(() => ({
-        coefficients: Array(numVariables).fill(0),
-        type: '<=' as ConstraintType,
-        rhs: 0,
-      }))
-    );
-    resetSolution();
-  };
-
   return (
     <div className="container">
       <h1>Метод искусственного базиса (M-метод)</h1>
@@ -458,15 +520,33 @@ const Lab3: React.FC = () => {
         <p className="constraint-note">Все переменные x<sub>i</sub> ≥ 0</p>
       </div>
 
+      <div className="examples-section">
+        <h3>Примеры из лекций:</h3>
+        <div className="example-selector">
+          {examples.map((example, index) => (
+            <button
+              key={index}
+              className={`example-btn ${currentExampleIndex === index ? 'active' : ''}`}
+              onClick={() => loadExample(index)}
+            >
+              {example.name}
+            </button>
+          ))}
+        </div>
+        <div className="example-description">
+          {examples[currentExampleIndex].description}
+        </div>
+      </div>
+
       <div className="buttons">
         <button className="btn-primary" onClick={solve}>
           Решить задачу
         </button>
-        <button className="btn-secondary" onClick={fillExample}>
-          Пример
+        <button className="btn-secondary" onClick={nextExample}>
+          Следующий пример
         </button>
-        <button className="btn-clear" onClick={clearAll}>
-          Очистить
+        <button className="btn-clear" onClick={() => loadExample(0)}>
+          Сбросить
         </button>
       </div>
 
