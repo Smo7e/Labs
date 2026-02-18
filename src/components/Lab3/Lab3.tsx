@@ -418,7 +418,7 @@ const Lab3: React.FC = () => {
 
   return (
     <div className="container">
-      <h1>Метод искусственного базиса (M-метод)</h1>
+      <h1>Метод искусственного базиса</h1>
       <p className="subtitle">Решение задач линейного программирования</p>
 
       <div className="settings-grid">
