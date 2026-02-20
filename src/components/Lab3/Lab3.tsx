@@ -39,7 +39,7 @@ const Lab3: React.FC = () => {
 
   const examples = [
     {
-      name: 'Пример 1',
+      name: 'Пример 1 (базовый)',
       numVariables: 2,
       numConstraints: 2,
       optimizationType: 'max' as OptimizationType,
@@ -51,20 +51,21 @@ const Lab3: React.FC = () => {
       description: 'max z = 3x₁ + 5x₂; x₁ ≤ 4; 2x₂ ≤ 12 (Ответ: x₁=4, x₂=6, z=42)',
     },
     {
-      name: 'Пример 2',
+      name: 'Пример 2 (из лекции)',
       numVariables: 2,
-      numConstraints: 3,
+      numConstraints: 4,
       optimizationType: 'max' as OptimizationType,
       objectiveCoefficients: [3, 8],
       constraints: [
-        { coefficients: [1, 7], type: '=' as ConstraintType, rhs: 32 },
-        { coefficients: [2, 5], type: '=' as ConstraintType, rhs: 42 },
-        { coefficients: [3, 4], type: '=' as ConstraintType, rhs: 62 },
+        { coefficients: [1, 7], type: '<=' as ConstraintType, rhs: 32 },
+        { coefficients: [2, 5], type: '<=' as ConstraintType, rhs: 42 },
+        { coefficients: [3, 4], type: '<=' as ConstraintType, rhs: 62 },
+        { coefficients: [2, 1], type: '=' as ConstraintType, rhs: 34 },
       ],
-      description: 'max F = 3x₁ + 8x₂; x₁ + 7x₂ = 32; 2x₁ + 5x₂ = 42; 3x₁ + 4x₂ = 62',
+      description: 'max f = 3x₁ + 8x₂; x₁ + 7x₂ ≤ 32; 2x₁ + 5x₂ ≤ 42; 3x₁ + 4x₂ ≤ 62; 2x₁ + x₂ = 34',
     },
     {
-      name: 'Пример 3',
+      name: 'Пример 3 (с равенством)',
       numVariables: 2,
       numConstraints: 2,
       optimizationType: 'max' as OptimizationType,
@@ -76,7 +77,7 @@ const Lab3: React.FC = () => {
       description: 'max z = 3x₁ + 2x₂; x₁ + x₂ = 4; 2x₁ + x₂ ≤ 6',
     },
     {
-      name: 'Пример 4',
+      name: 'Пример 4 (с ограничением ≥)',
       numVariables: 2,
       numConstraints: 2,
       optimizationType: 'max' as OptimizationType,
@@ -88,14 +89,14 @@ const Lab3: React.FC = () => {
       description: 'max z = 4x₁ + 3x₂; x₁ + x₂ ≥ 3; 2x₁ + x₂ ≤ 10',
     },
     {
-      name: 'Пример 5',
+      name: 'Пример 5 (минимизация)',
       numVariables: 2,
       numConstraints: 2,
       optimizationType: 'min' as OptimizationType,
       objectiveCoefficients: [2, 3],
       constraints: [
-        { coefficients: [1, 2], type: '<=' as ConstraintType, rhs: 4 },
-        { coefficients: [2, 1], type: '<=' as ConstraintType, rhs: 4 },
+        { coefficients: [1, 2], type: '>=' as ConstraintType, rhs: 4 },
+        { coefficients: [2, 1], type: '>=' as ConstraintType, rhs: 4 },
       ],
       description: 'min z = 2x₁ + 3x₂; x₁ + 2x₂ ≥ 4; 2x₁ + x₂ ≥ 4',
     },
@@ -103,6 +104,11 @@ const Lab3: React.FC = () => {
 
   const [currentExampleIndex, setCurrentExampleIndex] = useState<number>(0);
 
+  const resetSolution = (): void => {
+    setSolution(null);
+    setError(null);
+    setSteps([]);
+  };
 
   const handleNumVariablesChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const newNum = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
@@ -159,11 +165,6 @@ const Lab3: React.FC = () => {
     setConstraints(newConstraints);
   };
 
-  const resetSolution = (): void => {
-    setSolution(null);
-    setError(null);
-    setSteps([]);
-  };
 
   const loadExample = (index: number): void => {
     const example = examples[index];
@@ -204,6 +205,15 @@ const Lab3: React.FC = () => {
 
       const newSteps: Step[] = [];
       
+      // Отладка: выводим загруженные ограничения
+      console.log('=== Загруженные ограничения ===');
+      console.log('numVariables:', numVariables);
+      console.log('numConstraints:', numConstraints);
+      console.log('Ограничения:', constraints);
+      constraints.forEach((c, i) => {
+        console.log(`  ${i+1}: ${c.coefficients.join(', ')} ${c.type} ${c.rhs}`);
+      });
+      
       // Определяем количество дополнительных переменных
       let numSlack = 0;
       let numSurplus = 0;
@@ -217,6 +227,11 @@ const Lab3: React.FC = () => {
         }
         if (c.type === '=') numArtificial++;
       });
+      
+      console.log('После подсчёта:');
+      console.log('  numSlack:', numSlack);
+      console.log('  numSurplus:', numSurplus);
+      console.log('  numArtificial:', numArtificial);
 
       const totalVars = numVariables + numSlack + numSurplus + numArtificial;
       
@@ -227,7 +242,7 @@ const Lab3: React.FC = () => {
       let tableau: number[][] = Array(numRows).fill(null).map(() => Array(numCols).fill(0));
       
       // Заполняем строку целевой функции
-      const M = 1000000; // Большое M
+      const M = 10000; // Большое M (разумное значение для численной стабильности)
       
       // Коэффициенты оригинальной целевой функции
       for (let j = 0; j < numVariables; j++) {
@@ -308,7 +323,7 @@ const Lab3: React.FC = () => {
         
         // Находим входящую переменную (наиболее отрицательный элемент в строке z)
         let pivotCol = -1;
-        let minValue = -1e-6; // Порог для определения оптимальности
+        let minValue = -0.001; // Порог для определения оптимальности (увеличен для численной стабильности)
         
         for (let j = 1; j < numCols - 1; j++) {
           if (tableau[0][j] < minValue) {
@@ -327,9 +342,9 @@ const Lab3: React.FC = () => {
         let minRatio = Infinity;
         
         for (let i = 1; i < numRows; i++) {
-          if (tableau[i][pivotCol] > 1e-10) {
+          if (tableau[i][pivotCol] > 0.001) { // увеличенный порог
             const ratio = tableau[i][numCols - 1] / tableau[i][pivotCol];
-            if (ratio >= 0 && ratio < minRatio) {
+            if (ratio >= -0.001 && ratio < minRatio) { // допускаем малые отрицательные из-за округления
               minRatio = ratio;
               pivotRow = i;
             }
@@ -374,15 +389,28 @@ const Lab3: React.FC = () => {
         return;
       }
 
-      // Проверяем, остались ли искусственные переменные в базисе
-      const artificialInBasis = basis.some(
-        b => b >= numVariables + numSlack + numSurplus
-      );
+      // Проверяем, остались ли искусственные переменные с ненулевым значением в базисе
+      console.log('=== Проверка искусственных переменных ===');
+      console.log('Базис:', basis);
+      console.log('numVariables:', numVariables, 'numSlack:', numSlack, 'numSurplus:', numSurplus);
+      console.log('Граница искусственных:', numVariables + numSlack + numSurplus);
       
-      if (artificialInBasis) {
-        setError('Задача не имеет допустимого решения (искусственные переменные в базисе)');
-        return;
+      for (let i = 0; i < numConstraints; i++) {
+        const varIndex = basis[i];
+        const value = tableau[i + 1][numCols - 1];
+        console.log(`Строка ${i}: переменная ${varIndex}, значение ${value}`);
+        
+        // Проверяем, является ли переменная искусственной
+        if (varIndex >= numVariables + numSlack + numSurplus) {
+          console.log(`  -> Искусственная! Проверяем значение: ${Math.abs(value)} > 0.01?`);
+          if (Math.abs(value) > 0.01) {
+            // Искусственная переменная имеет ненулевое значение
+            setError('Задача не имеет допустимого решения (искусственные переменные в базисе)');
+            return;
+          }
+        }
       }
+      console.log('=== Искусственные переменные обнулены, решение найдено ===');
 
       // Извлекаем решение
       const variables = Array(numVariables).fill(0);
@@ -418,7 +446,7 @@ const Lab3: React.FC = () => {
 
   return (
     <div className="container">
-      <h1>Метод искусственного базиса</h1>
+      <h1>Метод искусственного базиса (M-метод)</h1>
       <p className="subtitle">Решение задач линейного программирования</p>
 
       <div className="settings-grid">
